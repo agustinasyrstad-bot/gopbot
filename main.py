@@ -13,7 +13,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 # =========================
 # 🔑 CONFIG (SỬA 3 DÒNG NÀY)
 # =========================
-TOKEN = "8715231099:AAHqwqVIzTtmq1sSifZnOvuIzUzNfIWTtvs"
+TOKEN = "8715231099:AAHpDHL3mTRQtZGZ6aHpCNGNhDS7UWHPixk"
 ACR_HOST = "identify-ap-southeast-1.acrcloud.com"
 ACR_ACCESS_KEY = "296c929b5dc7ba13d230b5ef1124f920"
 ACR_ACCESS_SECRET = "mabjWhiYNpQWMbzzq43LckcuiOMLVYCIeZLVa9NH"
