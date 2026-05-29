@@ -1,3 +1,6 @@
+# main.py (đã sửa hoàn chỉnh)
+
+```python
 import asyncio
 import requests
 import os
@@ -11,9 +14,9 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # =========================
-# 🔑 CONFIG (SỬA 3 DÒNG NÀY)
+# 🔑 CONFIG
 # =========================
-TOKEN = "8715231099:AAHqwqVIzTtmq1sSifZnOvuIzUzNfIWTtvs"
+TOKEN = "8715231099:AAFLckkCVKV4ModtIQPcg2GIBJv8eMXvnXs"
 ACR_HOST = "identify-ap-southeast-1.acrcloud.com"
 ACR_ACCESS_KEY = "296c929b5dc7ba13d230b5ef1124f920"
 ACR_ACCESS_SECRET = "mabjWhiYNpQWMbzzq43LckcuiOMLVYCIeZLVa9NH"
@@ -34,17 +37,24 @@ async def start(msg: types.Message):
             [InlineKeyboardButton(text="🎵 Check nhạc", callback_data="music")]
         ]
     )
-    await msg.answer("👋 Chọn chức năng:", reply_markup=keyboard)
+
+    await msg.answer(
+        "👋 Chọn chức năng:",
+        reply_markup=keyboard
+    )
 
 # =========================
 # 🔘 CLICK BUTTON
 # =========================
 @dp.callback_query()
 async def callback_handler(callback: types.CallbackQuery):
+
     if callback.data == "tiktok":
         await callback.message.answer("📎 Gửi link TikTok")
+
     elif callback.data == "music":
         await callback.message.answer("📎 Gửi file MP3")
+
     await callback.answer()
 
 # =========================
@@ -52,6 +62,7 @@ async def callback_handler(callback: types.CallbackQuery):
 # =========================
 def clean_url(url):
     return url.split("?")[0]
+
 
 def safe_filename(name):
     return re.sub(r'[\\/*?:"<>|]', "", name)
@@ -62,22 +73,32 @@ def safe_filename(name):
 def api_1(url):
     try:
         api = f"https://tdownv4.sl-bjs.workers.dev/?down={url}"
-        res = requests.get(api, timeout=10).json()
-        return {"audio": res.get("audio_url"), "title": res.get("title")}
-    except:
+        res = requests.get(api, timeout=15).json()
+
+        return {
+            "audio": res.get("audio_url"),
+            "title": res.get("title")
+        }
+
+    except Exception as e:
+        print("API1 ERROR:", e)
         return None
+
 
 def api_2(url):
     try:
         api = f"https://www.tikwm.com/api/?url={url}"
-        res = requests.get(api, timeout=10).json()
+        res = requests.get(api, timeout=15).json()
+
         if res.get("data"):
             return {
                 "audio": res["data"].get("music"),
                 "title": res["data"].get("title")
             }
-    except:
-        return None
+
+    except Exception as e:
+        print("API2 ERROR:", e)
+
     return None
 
 # =========================
@@ -91,25 +112,35 @@ def recognize(file_path):
     timestamp = str(int(time.time()))
 
     string_to_sign = "\n".join([
-        http_method, http_uri, ACR_ACCESS_KEY,
-        data_type, signature_version, timestamp
+        http_method,
+        http_uri,
+        ACR_ACCESS_KEY,
+        data_type,
+        signature_version,
+        timestamp
     ])
 
     sign = base64.b64encode(
-        hmac.new(ACR_ACCESS_SECRET.encode('ascii'),
-                 string_to_sign.encode('ascii'),
-                 digestmod=hashlib.sha1).digest()
-    ).decode('ascii')
+        hmac.new(
+            ACR_ACCESS_SECRET.encode("ascii"),
+            string_to_sign.encode("ascii"),
+            digestmod=hashlib.sha1
+        ).digest()
+    ).decode("ascii")
 
-    with open(file_path, 'rb') as f:
-        files = {'sample': f}
+    with open(file_path, "rb") as f:
+
+        files = {
+            "sample": f
+        }
+
         data = {
-            'access_key': ACR_ACCESS_KEY,
-            'sample_bytes': os.path.getsize(file_path),
-            'timestamp': timestamp,
-            'signature': sign,
-            'data_type': data_type,
-            'signature_version': signature_version
+            "access_key": ACR_ACCESS_KEY,
+            "sample_bytes": os.path.getsize(file_path),
+            "timestamp": timestamp,
+            "signature": sign,
+            "data_type": data_type,
+            "signature_version": signature_version
         }
 
         url = f"http://{ACR_HOST}{http_uri}"
@@ -125,15 +156,21 @@ async def handle(message: types.Message):
 
     # ===== 1. LINK TIKTOK =====
     if message.text and "tiktok.com" in message.text:
+
         url = clean_url(message.text)
+
         msg = await message.answer("⏳ Đang tải...")
 
         data = api_1(url)
+
         if not data or not data.get("audio"):
             data = api_2(url)
 
         if data and data.get("audio"):
-            title = safe_filename(data.get("title") or "TikTok Audio")
+
+            title = safe_filename(
+                data.get("title") or "TikTok Audio"
+            )
 
             await message.answer_audio(
                 audio=data["audio"],
@@ -141,19 +178,23 @@ async def handle(message: types.Message):
                 performer="TikTok",
                 filename=f"{title}.mp3"
             )
+
             await msg.delete()
+
         else:
             await msg.edit_text("❌ Không tải được!")
 
         return
 
-    # ===== 2. FILE NHẠC (FIX CHUẨN AIROGRAM V3) =====
+    # ===== 2. FILE NHẠC =====
     if message.audio or message.document:
-        await message.answer("⏳ Đang xử lý...")
+
+        wait_msg = await message.answer("⏳ Đang xử lý...")
 
         file_path = None
 
         try:
+
             # lấy file_id
             if message.audio:
                 file_id = message.audio.file_id
@@ -162,15 +203,15 @@ async def handle(message: types.Message):
                 file_id = message.document.file_id
                 original_name = message.document.file_name or "audio.mp3"
 
-            # lấy file từ Telegram
+            # lấy file từ telegram
             file = await bot.get_file(file_id)
 
             file_path = f"{message.message_id}_{original_name}"
 
             # tải file
-            await bot.download_file(file.file_path, file_path)
+            await bot.download_file(file.file_path, destination=file_path)
 
-            # gọi ACR
+            # check ACR
             result = recognize(file_path)
             print("ACR RESULT:", result)
 
@@ -178,23 +219,34 @@ async def handle(message: types.Message):
             artist = ""
             status = "🟢 Không bản quyền"
 
-            if result.get("status", {}).get("code") == 0 and "metadata" in result:
-                music = result['metadata']['music'][0]
-                title = music.get('title', 'Unknown')
-                artist = music.get('artists', [{}])[0].get('name', 'Unknown')
+            if (
+                result.get("status", {}).get("code") == 0
+                and "metadata" in result
+            ):
+
+                music = result["metadata"]["music"][0]
+
+                title = music.get("title", "Unknown")
+                artist = music.get("artists", [{}])[0].get("name", "Unknown")
+
                 status = "🔴 Có bản quyền"
 
-            caption = f"""🎵 {title} {('- ' + artist) if artist else ''}
-📌 {status}"""
+            caption = (
+                f"🎵 {title}"
+                f" {('- ' + artist) if artist else ''}\n"
+                f"📌 {status}"
+            )
 
             await message.answer_document(
                 types.FSInputFile(file_path),
                 caption=caption
             )
 
+            await wait_msg.delete()
+
         except Exception as e:
-            print("Lỗi:", e)
-            await message.answer("❌ Lỗi xử lý nhạc")
+            print("LỖI:", e)
+            await message.answer(f"❌ Lỗi xử lý nhạc\n{e}")
 
         finally:
             if file_path and os.path.exists(file_path):
@@ -206,8 +258,34 @@ async def handle(message: types.Message):
 # ▶️ RUN
 # =========================
 async def main():
+
     print("🤖 Bot đang chạy...")
+
+    # XÓA WEBHOOK CŨ
+    await bot.delete_webhook(drop_pending_updates=True)
+
+    # CHẠY BOT
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
+```
+
+# requirements.txt
+
+```txt
+aiogram
+requests
+```
+
+# Cách chạy
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+# QUAN TRỌNG
+
+Bạn phải đổi TOKEN mới vì token cũ đã bị lộ.
